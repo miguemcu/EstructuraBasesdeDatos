@@ -2,12 +2,14 @@ from merkle_tree import MerkleTree
 import itertools
 
 def reordenar(transacciones):
+    # Genera todas las posibles formas de ordenar las transacciones
     ordenes = list(itertools.permutations(transacciones))
     return ordenes
 
 def fuerza_bruta(ordenes, root_obj):
     i = 0
     root = ""
+    # Prueba cada orden hasta que el Merkle root coincida con el objetivo
     while root != root_obj and i < len(ordenes):
         tree = MerkleTree(list(ordenes[i]))
         root = tree.construir()
