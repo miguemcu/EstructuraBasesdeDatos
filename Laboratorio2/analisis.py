@@ -78,6 +78,13 @@ def leer_float(mensaje, valor_por_defecto):
 	return float(texto)
 
 
+def leer_int(mensaje, valor_por_defecto):
+	texto = input(mensaje).strip()
+	if texto == '':
+		return valor_por_defecto
+	return int(texto)
+
+
 def leer_punto_consulta(valor_lat_por_defecto, valor_lon_por_defecto):
 	print('\nIngresa el punto consulta (Enter para usar el valor por defecto):')
 	latitud = leer_float(f'Latitud [{valor_lat_por_defecto}]: ', valor_lat_por_defecto)
@@ -94,6 +101,7 @@ def main():
 	radio_default = 500
 
 	# Primero hago la misma parte visual/interactiva para no ejecutar test.py por separado
+	cantidad_puntos_visual = leer_int(f'Cantidad de puntos [{cantidad_puntos_visual}]: ', cantidad_puntos_visual)
 	punto_consulta = leer_punto_consulta(punto_consulta_default[0], punto_consulta_default[1])
 	radio = leer_float(f'Radio en metros [{radio_default}]: ', radio_default)
 
@@ -122,7 +130,7 @@ def main():
 	print('\nAnalisis de tiempos:')
 
 	# Puedes ampliar esta lista si quieres un analisis mas fino
-	sizes = [10, 25, 50, 100, 500, 1000, 10000]
+	sizes = [10, 25, 50, 100, 500, 1000]
 
 	resultados = analizar_sizes(sizes, consultas_por_size, centro_medellin, radio)
 
