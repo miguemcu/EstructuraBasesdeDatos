@@ -114,7 +114,7 @@ def graficar_resultados(puntos, punto_consulta, resultado_nearest, resultados_ra
 
 
 def main():
-	random.seed(42)
+	random.seed(10)
 
 	n = 10000
 	centro_medellin = (6.2442, -75.5812)
