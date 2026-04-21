@@ -2,6 +2,7 @@
 
 import random
 import time
+import matplotlib.pyplot as plt
 
 from QuadTree import Quad_Tree
 from test import (
@@ -13,62 +14,57 @@ from test import (
 )
 
 
-def primer_size_qt_mejor(resultados, campo_qt, campo_bruta):
-	for fila in resultados:
-		if fila[campo_qt] < fila[campo_bruta]:
-			return fila['size']
-	return None
+def primer_size_qt_mejor(resultados, campo_qt, campo_bruta, clave='size'):
+    for fila in resultados:
+        if fila[campo_qt] < fila[campo_bruta]:
+            return fila[clave]
+    return None
 
 
-def analizar_sizes(sizes, consultas_por_size, centro, radio):
-	resumen = []
+def analizar_nearest(sizes, consultas_por_size, centro):
+    resumen = []
+    for size in sizes:
+        puntos = generar_puntos(size, centro)
+        consultas = generar_puntos(consultas_por_size, centro)
+        arbol = Quad_Tree(puntos)
 
-	for size in sizes:
-		puntos = generar_puntos(size, centro)
-		consultas = generar_puntos(consultas_por_size, centro)
+        inicio = time.perf_counter()
+        for p in consultas:
+            arbol.buscar_mas_cercano(p)
+        tiempo_qt = time.perf_counter() - inicio
 
-		arbol = Quad_Tree(puntos)
+        inicio = time.perf_counter()
+        for p in consultas:
+            nearest_fuerza_bruta(puntos, p)
+        tiempo_bruta = time.perf_counter() - inicio
 
-		# Tiempo del más cercano con Quad-Tree
-		inicio_nearest_qt = time.perf_counter()
-		for punto_consulta in consultas:
-			arbol.buscar_mas_cercano(punto_consulta)
-		tiempo_nearest_qt = time.perf_counter() - inicio_nearest_qt
+        resumen.append({'size': size, 'tiempo_qt': tiempo_qt, 'tiempo_bruta': tiempo_bruta})
+        print(f"size={size:6d} | QT={tiempo_qt:.4f}s vs bruta={tiempo_bruta:.4f}s")
 
-		# Tiempo del más cercano con fuerza bruta
-		inicio_nearest_bruta = time.perf_counter()
-		for punto_consulta in consultas:
-			nearest_fuerza_bruta(puntos, punto_consulta)
-		tiempo_nearest_bruta = time.perf_counter() - inicio_nearest_bruta
+    return resumen
 
-		# Búsqueda por rango con Quad-Tree
-		inicio_rango_qt = time.perf_counter()
-		for punto_consulta in consultas:
-			arbol.buscar_en_rango(punto_consulta, radio)
-		tiempo_rango_qt = time.perf_counter() - inicio_rango_qt
 
-		# Búsqueda por rango con fuerza bruta
-		inicio_rango_bruta = time.perf_counter()
-		for punto_consulta in consultas:
-			rango_fuerza_bruta(puntos, punto_consulta, radio)
-		tiempo_rango_bruta = time.perf_counter() - inicio_rango_bruta
+def analizar_rango(radios, consultas_por_radio, centro, size_fijo):
+    puntos = generar_puntos(size_fijo, centro)
+    consultas = generar_puntos(consultas_por_radio, centro)
+    arbol = Quad_Tree(puntos)
+    resumen = []
 
-		fila = {
-			'size': size,
-			'tiempo_nearest_qt': tiempo_nearest_qt,
-			'tiempo_nearest_bruta': tiempo_nearest_bruta,
-			'tiempo_rango_qt': tiempo_rango_qt,
-			'tiempo_rango_bruta': tiempo_rango_bruta,
-		}
-		resumen.append(fila)
+    for radio in radios:
+        inicio = time.perf_counter()
+        for p in consultas:
+            arbol.buscar_en_rango(p, radio)
+        tiempo_qt = time.perf_counter() - inicio
 
-		print(
-			f"size={size:6d} | "
-			f"mas cercano QT={tiempo_nearest_qt:.4f}s vs bruta={tiempo_nearest_bruta:.4f}s | "
-			f"radio QT={tiempo_rango_qt:.4f}s vs bruta={tiempo_rango_bruta:.4f}s"
-		)
+        inicio = time.perf_counter()
+        for p in consultas:
+            rango_fuerza_bruta(puntos, p, radio)
+        tiempo_bruta = time.perf_counter() - inicio
 
-	return resumen
+        resumen.append({'radio': radio, 'tiempo_qt': tiempo_qt, 'tiempo_bruta': tiempo_bruta})
+        print(f"radio={radio:6d}m | QT={tiempo_qt:.4f}s vs bruta={tiempo_bruta:.4f}s")
+
+    return resumen
 
 
 def leer_float(mensaje, valor_por_defecto):
@@ -91,6 +87,32 @@ def leer_punto_consulta(valor_lat_por_defecto, valor_lon_por_defecto):
 	longitud = leer_float(f'Longitud [{valor_lon_por_defecto}]: ', valor_lon_por_defecto)
 	return (latitud, longitud)
 
+def graficar_nearest(resumen):
+    sizes = [f['size'] for f in resumen]
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(sizes, [f['tiempo_qt']    for f in resumen], marker='o', label='Quad-Tree',    c='#2a9d8f')
+    ax.plot(sizes, [f['tiempo_bruta'] for f in resumen], marker='o', label='Fuerza bruta', c='#e76f51')
+    ax.set_title('Nearest Neighbor: tiempo vs cantidad de puntos')
+    ax.set_xlabel('Cantidad de puntos')
+    ax.set_ylabel('Tiempo (s)')
+    ax.legend()
+    ax.grid(alpha=0.2)
+    plt.tight_layout()
+    plt.show()
+
+
+def graficar_rango(resumen):
+    radios = [f['radio'] for f in resumen]
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(radios, [f['tiempo_qt']    for f in resumen], marker='o', label='Quad-Tree',    c='#2a9d8f')
+    ax.plot(radios, [f['tiempo_bruta'] for f in resumen], marker='o', label='Fuerza bruta', c='#e76f51')
+    ax.set_title('Busqueda por Rango: tiempo vs radio')
+    ax.set_xlabel('Radio (m)')
+    ax.set_ylabel('Tiempo (s)')
+    ax.legend()
+    ax.grid(alpha=0.2)
+    plt.tight_layout()
+    plt.show()
 
 def main():
 	random.seed(90)
@@ -128,23 +150,28 @@ def main():
 	graficar_resultados(puntos_visual, punto_consulta, resultado_nearest, resultados_radio, radio, arbol_visual)
 
 	print('\nAnalisis de tiempos:')
-	sizes = [10, 25, 50, 100, 500, 1000]
+	sizes = [10, 25, 50, 100, 200, 300, 500, 750, 1000]
+	radios = [100, 250, 500, 750, 1000, 1500, 2000, 3000]
+	size_fijo_rango = 1000
 
-	resultados = analizar_sizes(sizes, consultas_por_size, centro_medellin, radio)
+	print('\nAnalisis nearest neighbor (tiempo vs size):')
+	resumen_nearest = analizar_nearest(sizes, consultas_por_size, centro_medellin)
 
-	primer_size_nearest_mejor = primer_size_qt_mejor(resultados, 'tiempo_nearest_qt', 'tiempo_nearest_bruta')
-	primer_size_radio_mejor = primer_size_qt_mejor(resultados, 'tiempo_rango_qt', 'tiempo_rango_bruta')
+	print(f'\nAnalisis rango (tiempo vs radio, {size_fijo_rango} puntos fijos):')
+	resumen_rango = analizar_rango(radios, consultas_por_size, centro_medellin, size_fijo_rango)
+
+	primer_size = primer_size_qt_mejor(resumen_nearest, 'tiempo_qt', 'tiempo_bruta')
+	primer_radio = primer_size_qt_mejor(resumen_rango, 'tiempo_qt', 'tiempo_bruta', clave='radio')
 
 	print('\nResumen estricto:')
-	if primer_size_nearest_mejor is not None:
-		print(f'- Mas cercano (solo busqueda): QT ya es mejor desde size={primer_size_nearest_mejor}')
+	if primer_size:
+		print(f'- Nearest: QT ya es mejor desde size={primer_size}')
 	else:
-		print('- Mas cercano (solo busqueda): en estos sizes aun no es claramente mejor')
+		print('- Nearest: en estos sizes aun no es claramente mejor')
 
-	if primer_size_radio_mejor is not None:
-		print(f'- Radio (solo busqueda): QT ya es mejor desde size={primer_size_radio_mejor}')
-	else:
-		print('- Radio (solo busqueda): en estos sizes aun no es claramente mejor')
+	graficar_nearest(resumen_nearest)
+	graficar_rango(resumen_rango)
+	
 
 
 if __name__ == '__main__':

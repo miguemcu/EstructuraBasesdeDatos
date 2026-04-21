@@ -5,7 +5,7 @@ class Nodo:
 	def __init__(self, dato, centro, radio):
 		self.dato = dato           # Un único punto (lat, lon)
 		self.centro = centro       # (lat, lon) del centro de esta región
-		self.radio = radio   # Mitad del lado del cuadrado que representa esta región
+		self.radio = radio   		# Mitad del lado del cuadrado, para definir los límites
 		self.hijos = [None, None, None, None] # Hijos en el orden: NO, NE, SE, SO
 
 
@@ -77,7 +77,7 @@ class Quad_Tree:
 		if nodo is None:
 			return None, float('inf') # Literalmente cualquier número va a ser mejor que infinito
 		
-		# Reviso primero el punto del nodo raiz
+		# Reviso primero el punto del nodo actual
 		distancia = geodesic(punto, nodo.dato).m
 		if distancia < mejor_distancia:
 			mejor_distancia = distancia
@@ -94,8 +94,8 @@ class Quad_Tree:
 
 			# Poda: calculo la distancia mínima posible al cuadrado del hijo
 			# y si esa distancia ya es mayor que la mejor que tengo, no tiene sentido entrar
-			dist_a_cuad = self.distancia_a_cuadrado(punto, hijo.centro, hijo.radio)
-			if dist_a_cuad >= mejor_distancia:
+			distancia_a_cuadrado = self.distancia_a_cuadrado(punto, hijo.centro, hijo.radio)
+			if distancia_a_cuadrado >= mejor_distancia:
 				continue
 
 			mejor_punto, mejor_distancia = self.buscar_mas_cercano(
@@ -123,8 +123,8 @@ class Quad_Tree:
 		for hijo in nodo.hijos:
 			if hijo is None:
 				continue
-			dist_min_rect = self.distancia_a_cuadrado(punto, hijo.centro, hijo.radio)
-			if dist_min_rect <= rango:
+			distancia_a_cuadrado = self.distancia_a_cuadrado(punto, hijo.centro, hijo.radio)
+			if distancia_a_cuadrado <= rango:
 				self.buscar_en_rango(punto, rango, hijo, resultados)
 
 		return resultados

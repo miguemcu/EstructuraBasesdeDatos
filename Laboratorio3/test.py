@@ -37,8 +37,8 @@ def rango_fuerza_bruta(puntos, punto_consulta, rango_metros):
 
 
 def metros_a_grados_lat(metros):
-	# Aprox: 1 grado de latitud son ~111139 m
-	return metros / 111139
+	# Aprox: 1 grado de latitud son ~111133 m en Medellín
+	return metros / 111133
 
 
 def validar_resultados(puntos, punto_consulta, rango_metros, arbol):
@@ -139,7 +139,7 @@ def main():
 	n = 10000
 	centro_medellin = (6.2442, -75.5812)
 	punto_consulta = (6.2510, -75.5700)
-	rango_metros = 1200
+	rango_metros = 500
 
 	puntos = generar_puntos(n, centro_medellin)
 	arbol = Quad_Tree(puntos)
