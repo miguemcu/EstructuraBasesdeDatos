@@ -13,7 +13,6 @@ from test import (
 	graficar_resultados,
 )
 
-
 def primer_size_qt_mejor(resultados, campo_qt, campo_bruta, clave='size'):
     for fila in resultados:
         if fila[campo_qt] < fila[campo_bruta]:
@@ -21,50 +20,71 @@ def primer_size_qt_mejor(resultados, campo_qt, campo_bruta, clave='size'):
     return None
 
 
-def analizar_nearest(sizes, consultas_por_size, centro):
-    resumen = []
-    for size in sizes:
-        puntos = generar_puntos(size, centro)
-        consultas = generar_puntos(consultas_por_size, centro)
-        arbol = Quad_Tree(puntos)
+def analizar_nearest(sizes, consultas_por_size, centro, corridas_por_size=1):
+	resumen = []
+	for size in sizes:
+		tiempos_qt = []
+		tiempos_bruta = []
 
-        inicio = time.perf_counter()
-        for p in consultas:
-            arbol.buscar_mas_cercano(p)
-        tiempo_qt = time.perf_counter() - inicio
+		for i in range(corridas_por_size):
+			puntos = generar_puntos(size, centro)
+			consultas = generar_puntos(consultas_por_size, centro)
+			arbol = Quad_Tree(puntos)
 
-        inicio = time.perf_counter()
-        for p in consultas:
-            nearest_fuerza_bruta(puntos, p)
-        tiempo_bruta = time.perf_counter() - inicio
+			inicio = time.perf_counter()
+			for p in consultas:
+				arbol.buscar_mas_cercano(p)
+			tiempos_qt.append(time.perf_counter() - inicio)
 
-        resumen.append({'size': size, 'tiempo_qt': tiempo_qt, 'tiempo_bruta': tiempo_bruta})
-        print(f"size={size:6d} | QT={tiempo_qt:.4f}s vs bruta={tiempo_bruta:.4f}s")
+			inicio = time.perf_counter()
+			for p in consultas:
+				nearest_fuerza_bruta(puntos, p)
+			tiempos_bruta.append(time.perf_counter() - inicio)
 
-    return resumen
+		tiempo_qt_promedio = sum(tiempos_qt) / corridas_por_size
+		tiempo_bruta_promedio = sum(tiempos_bruta) / corridas_por_size
+
+		resumen.append({'size': size, 'tiempo_qt': tiempo_qt_promedio, 'tiempo_bruta': tiempo_bruta_promedio})
+		print(
+			f"size={size:6d} | QT prom={tiempo_qt_promedio:.4f}s vs "
+			f"bruta prom={tiempo_bruta_promedio:.4f}s)"
+		)
+
+	return resumen
 
 
-def analizar_rango(radios, consultas_por_radio, centro, size_fijo):
-    puntos = generar_puntos(size_fijo, centro)
-    consultas = generar_puntos(consultas_por_radio, centro)
-    arbol = Quad_Tree(puntos)
-    resumen = []
+def analizar_rango(radios, consultas_por_radio, centro, size_fijo, corridas_por_radio=1):
+	resumen = []
 
-    for radio in radios:
-        inicio = time.perf_counter()
-        for p in consultas:
-            arbol.buscar_en_rango(p, radio)
-        tiempo_qt = time.perf_counter() - inicio
+	for radio in radios:
+		tiempos_qt = []
+		tiempos_bruta = []
 
-        inicio = time.perf_counter()
-        for p in consultas:
-            rango_fuerza_bruta(puntos, p, radio)
-        tiempo_bruta = time.perf_counter() - inicio
+		for i in range(corridas_por_radio):
+			puntos = generar_puntos(size_fijo, centro)
+			consultas = generar_puntos(consultas_por_radio, centro)
+			arbol = Quad_Tree(puntos)
 
-        resumen.append({'radio': radio, 'tiempo_qt': tiempo_qt, 'tiempo_bruta': tiempo_bruta})
-        print(f"radio={radio:6d}m | QT={tiempo_qt:.4f}s vs bruta={tiempo_bruta:.4f}s")
+			inicio = time.perf_counter()
+			for p in consultas:
+				arbol.buscar_en_rango(p, radio)
+			tiempos_qt.append(time.perf_counter() - inicio)
 
-    return resumen
+			inicio = time.perf_counter()
+			for p in consultas:
+				rango_fuerza_bruta(puntos, p, radio)
+			tiempos_bruta.append(time.perf_counter() - inicio)
+
+		tiempo_qt_promedio = sum(tiempos_qt) / corridas_por_radio
+		tiempo_bruta_promedio = sum(tiempos_bruta) / corridas_por_radio
+
+		resumen.append({'radio': radio, 'tiempo_qt': tiempo_qt_promedio, 'tiempo_bruta': tiempo_bruta_promedio})
+		print(
+			f"radio={radio:6d}m | QT prom={tiempo_qt_promedio:.4f}s vs "
+			f"bruta prom={tiempo_bruta_promedio:.4f}s)"
+		)
+
+	return resumen
 
 
 def leer_float(mensaje, valor_por_defecto):
@@ -119,6 +139,7 @@ def main():
 
 	centro_medellin = (6.245, -75.57151)
 	consultas_por_size = 25
+	corridas_por_size = 20
 	cantidad_puntos_visual = 10000
 	punto_consulta_default = (6.2510, -75.5700)
 	radio_default = 500
@@ -148,17 +169,17 @@ def main():
 	print('Radio coincide con fuerza bruta:', radio_coincide)
 
 	graficar_resultados(puntos_visual, punto_consulta, resultado_nearest, resultados_radio, radio, arbol_visual)
-
+# tiempo promedio de {corridas_por_size} vs size:
 	print('\nAnalisis de tiempos:')
-	sizes = [10, 25, 50, 100, 200, 300, 500, 750, 1000]
-	radios = [100, 250, 500, 750, 1000, 1500, 2000, 3000]
+	sizes = [25, 50, 100, 250, 500, 1000]
+	radios = [100, 500, 1000, 2000, 3000]
 	size_fijo_rango = 1000
 
-	print('\nAnalisis nearest neighbor (tiempo vs size):')
-	resumen_nearest = analizar_nearest(sizes, consultas_por_size, centro_medellin)
+	print(f'\nAnalisis nearest neighbor (tiempo promedio de {corridas_por_size} corridas vs size):')
+	resumen_nearest = analizar_nearest(sizes, consultas_por_size, centro_medellin, corridas_por_size)
 
-	print(f'\nAnalisis rango (tiempo vs radio, {size_fijo_rango} puntos fijos):')
-	resumen_rango = analizar_rango(radios, consultas_por_size, centro_medellin, size_fijo_rango)
+	print(f'\nAnalisis rango (tiempo promedio de {corridas_por_size} corridas vs radio, {size_fijo_rango} puntos fijos):')
+	resumen_rango = analizar_rango(radios, consultas_por_size, centro_medellin, size_fijo_rango, corridas_por_size)
 
 	primer_size = primer_size_qt_mejor(resumen_nearest, 'tiempo_qt', 'tiempo_bruta')
 	primer_radio = primer_size_qt_mejor(resumen_rango, 'tiempo_qt', 'tiempo_bruta', clave='radio')
